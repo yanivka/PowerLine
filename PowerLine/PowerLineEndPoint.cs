@@ -6,6 +6,7 @@ using System.Net;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace PowerLine
 {
@@ -60,28 +61,32 @@ namespace PowerLine
                 return null;
             }
         }
-        internal PowerLineEndPointExecutionResult OnSelfRequest(int index, string[] requestPath, PowerLineContext context)
+        internal async Task<PowerLineEndPointExecutionResult> OnSelfRequestAsync(int index, string[] requestPath, PowerLineContext context)
         {
-            if(this.handlers.TryGetValue(context.request.HttpMethod, out PowerLineHandler handler))
+            if(this.handlers.TryGetValue(context.RequestMethod, out PowerLineHandler handler))
             {
-                return handler.SafeHandleRequest(this, index, requestPath, context);
+                return await handler.SafeHandleRequestAsync(this, index, requestPath, context);
             }
             else
             {
                 return new PowerLineEndPointExecutionResult(context, PowerLinExecutionResultType.HttpMethodNotFound, this);
             }
         }
-        internal PowerLineEndPointExecutionResult OnRequest(int index, string[] requestPath, PowerLineContext context)
+        internal async Task<PowerLineEndPointExecutionResult> OnRequestAsync(int index, string[] requestPath, PowerLineContext context)
         {
-            if(this.Dynamic || index >= requestPath.Length)
+            if(index >= requestPath.Length)
             {
-                return this.OnSelfRequest(index, requestPath, context);
+                return await this.OnSelfRequestAsync(index, requestPath, context);
             }
             else
             {
                 if(this.childEndPoints.TryGetValue(requestPath[index], out PowerLineEndPoint endpoint))
                 {
-                    return endpoint.OnRequest(index + 1, requestPath, context);
+                    return await endpoint.OnRequestAsync(index + 1, requestPath, context);
+                }
+                else if(this.Dynamic)
+                {
+                    return await this.OnSelfRequestAsync(index, requestPath, context);
                 }
                 else
                 {
@@ -89,5 +94,7 @@ namespace PowerLine
                 }
             }
         }
+
+        public virtual bool VerifyDynamicEndpoint(Uri requestLine) => true;
     }
 }

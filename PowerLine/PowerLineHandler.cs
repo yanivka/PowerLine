@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-
+using System.Threading.Tasks;
 
 namespace PowerLine
 {
@@ -13,11 +13,12 @@ namespace PowerLine
         {
             this.HttpMethod = httpMethod;
         }
-        internal PowerLineEndPointExecutionResult SafeHandleRequest( PowerLineEndPoint endpoint, int index, string[] requestPath, PowerLineContext context)
+        internal async Task<PowerLineEndPointExecutionResult> SafeHandleRequestAsync(PowerLineEndPoint endpoint, int index, string[] requestPath, PowerLineContext context)
         {
             try
             {
-                this.HandleRequest(context);
+                context.PathIndex = index;
+                await this.HandleRequest(context);
                 return new PowerLineEndPointExecutionResult(context, endpoint, this);
             } 
             catch(Exception ex)
@@ -26,6 +27,6 @@ namespace PowerLine
             }
         }
            
-        public abstract void HandleRequest(PowerLineContext context);
+        public abstract Task HandleRequest(PowerLineContext context);
     }
 }
