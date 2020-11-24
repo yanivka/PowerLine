@@ -34,6 +34,18 @@ namespace PowerLine
             this.handlers.Add(handler.HttpMethod, handler);
             return handler;
         }
+        public PowerLineHandler SetHandler(PowerLineHandler handler)
+        {
+            if(this.handlers.ContainsKey(handler.HttpMethod))
+            {
+                this.handlers[handler.HttpMethod] = handler;
+                return handler;
+            }
+            else
+            {
+                return this.AddHandler(handler);
+            }
+        }
         public PowerLineHandler GetHandler(string handlerMethod)
         {
             if(this.handlers.TryGetValue(handlerMethod, out PowerLineHandler currentHandler))

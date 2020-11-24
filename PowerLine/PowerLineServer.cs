@@ -40,7 +40,7 @@ namespace PowerLine
         public event EventHandler<PowerLineServer> OnStop;
         public event EventHandler<HttpListenerContext> OnWebsocketClient;
         public event EventHandler<HttpListenerContext> OnHttpClient;
-        public event EventHandler<Exception> OnError;
+        //public event EventHandler<Exception> OnError;
 
         private Upnp.UpnpEngine upnpEngine;
         private PowerLineEndPoint upnpEndpoint;
@@ -71,7 +71,6 @@ namespace PowerLine
             }
         }
 
-
         internal string BuildBindUrl() => (this.BindAddress == IPAddress.Any) ? BuildBindUrl("*", this.BindPort) : BuildBindUrl(this.BindAddress.ToString(), this.BindPort);
         public static string BuildBindUrl(string address, int port) => $"http://{address}:{port}/";
         public PowerLineEndPoint AddEndpoint(PowerLineEndPoint endpoint)
@@ -87,8 +86,57 @@ namespace PowerLine
                     this.endPoints.Add(endpoint.EndPointName, endpoint);
                 }
                 return endpoint;
+            }   
+        }
+        public PowerLineEndPoint AddHandler(string endpointName, Func<PowerLineContext, Task> func)
+        {
+            return this.AddHandler(endpointName, PowerLineHandleMethod.GET, func);
+        }
+        public PowerLineEndPoint AddHandler(string endpointName, string httpMethod, Func<PowerLineContext, Task> func)
+        {
+            PowerLineHandler mainHandler = PowerLineHandler.Create(httpMethod, func);
+            if (this.GetEndPoint(endpointName, out PowerLineEndPoint endpoint))
+            {
+                endpoint.SetHandler(mainHandler);
+                return endpoint;
             }
-            
+            else
+            {
+                return this.AddEndpoint(endpointName, mainHandler);
+            }
+        }
+        public PowerLineEndPoint AddHandler(string endpointName, PowerLineHandleMethod httpMethod, Func<PowerLineContext, Task> func)
+        {
+            return this.AddHandler(endpointName, httpMethod.ToString(), func);
+        }
+        public PowerLineEndPoint AddHandler(string endpointName, Action<PowerLineContext> func)
+        {
+            return this.AddHandler(endpointName, PowerLineHandleMethod.GET, func);
+        }
+        public PowerLineEndPoint AddHandler(string endpointName, string httpMethod, Action<PowerLineContext> func)
+        {
+            PowerLineHandler mainHandler = PowerLineHandler.Create(httpMethod, func);
+            if (this.GetEndPoint(endpointName, out PowerLineEndPoint endpoint))
+            {
+                endpoint.SetHandler(mainHandler);
+                return endpoint;
+            }
+            else
+            {
+                return this.AddEndpoint(endpointName, mainHandler);
+            }
+        }
+        public PowerLineEndPoint AddHandler(string endpointName, PowerLineHandleMethod httpMethod, Action<PowerLineContext> func)
+        {
+            return this.AddHandler(endpointName, httpMethod.ToString(), func);
+        }
+        public PowerLineEndPoint AddEndpoint(string endpointName, params PowerLineHandler[] handlers)
+        {
+            return this.AddEndpoint(endpointName, false, handlers);
+        }
+        public PowerLineEndPoint AddEndpoint(string endpointName, bool dynamic , params PowerLineHandler[] handlers)
+        {
+            return this.AddEndpoint(new PowerLineEndPoint(endpointName, handlers, dynamic));
         }
         public PowerLineEndPoint RemoveEndpoint(PowerLineEndPoint endpoint)
         {
@@ -142,7 +190,6 @@ namespace PowerLine
         {
             this.Stop();
         }
-
         public void StartUpnp()
         {
             this.AddEndpoint(this.upnpEndpoint);
@@ -167,7 +214,6 @@ namespace PowerLine
             this.upnpEngine.Stop();
             this.RemoveEndpoint(this.upnpEndpoint);
         }
-
         public PowerLineWebsocketClient[] GetAllClients()
         {
             lock(this.websocketClientLock)
@@ -380,8 +426,6 @@ namespace PowerLine
             client.UnsubscribeEvent(powerLineEvent);
             powerLineEvent.UnsubscribeClient(client);
         }
-
-
         internal void innerAddClient(PowerLineWebsocketClient client)
         {
             lock(this.websocketClientLock)

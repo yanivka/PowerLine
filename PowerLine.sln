@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29926.136
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerLine", "PowerLine\PowerLine.csproj", "{90948D01-2619-4F14-A5EB-A9CF884634EE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLine", "PowerLine\PowerLine.csproj", "{90948D01-2619-4F14-A5EB-A9CF884634EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerLineTester", "PowerLineTester\PowerLineTester.csproj", "{E6478C51-3BDB-46AE-B6CF-8845730E2624}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerLineTester", "PowerLineTester\PowerLineTester.csproj", "{E6478C51-3BDB-46AE-B6CF-8845730E2624}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorCommunicator", "BlazorCommunicator\BlazorCommunicator.csproj", "{8AC1D6ED-5D34-4DA7-8983-266FB6B8910E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{E6478C51-3BDB-46AE-B6CF-8845730E2624}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E6478C51-3BDB-46AE-B6CF-8845730E2624}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E6478C51-3BDB-46AE-B6CF-8845730E2624}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AC1D6ED-5D34-4DA7-8983-266FB6B8910E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AC1D6ED-5D34-4DA7-8983-266FB6B8910E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AC1D6ED-5D34-4DA7-8983-266FB6B8910E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AC1D6ED-5D34-4DA7-8983-266FB6B8910E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

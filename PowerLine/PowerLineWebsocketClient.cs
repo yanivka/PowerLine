@@ -13,7 +13,6 @@ namespace PowerLine
 {
     public class PowerLineWebsocketClient
     {
-
         public readonly HttpListenerContext FirstContext;
         public readonly Task mainTask;
         public readonly CancellationToken CancelToken;
@@ -30,8 +29,6 @@ namespace PowerLine
         internal object eventsLock;
 
         internal SemaphoreSlim sendLock;
-       
-
 
         internal Dictionary<string, object> CustomValues;
         internal object CustomValueLock;
