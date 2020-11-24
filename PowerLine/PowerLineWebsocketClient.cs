@@ -21,6 +21,11 @@ namespace PowerLine
         public HttpListenerWebSocketContext websocketContext;
         public WebSocket websocket;
 
+        public readonly string LocalAddress;
+        public readonly string RemoteAddress;
+        public readonly int LocalPort;
+        public readonly int RemotePort;
+
         internal Dictionary<string, PowerLineEvent> events;
         internal object eventsLock;
 
@@ -33,6 +38,11 @@ namespace PowerLine
 
         public PowerLineWebsocketClient(PowerLineServer server, HttpListenerContext firstContext, CancellationToken cancelToken)
         {
+            this.LocalAddress = firstContext.Request.LocalEndPoint.Address.ToString();
+            this.LocalPort = firstContext.Request.LocalEndPoint.Port;
+            this.RemoteAddress = firstContext.Request.RemoteEndPoint.Address.ToString();
+            this.RemotePort = firstContext.Request.RemoteEndPoint.Port;
+
             this.sendLock = new SemaphoreSlim(1, 1);
             this.CustomValueLock = new object();
             this.CustomValues = new Dictionary<string, object>();

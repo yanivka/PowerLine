@@ -72,6 +72,7 @@ namespace PowerLine
                 return new PowerLineEndPointExecutionResult(context, PowerLinExecutionResultType.HttpMethodNotFound, this);
             }
         }
+        private PowerLineEndPoint GetDyanmicEndpoint() => this.childEndPoints.Values.FirstOrDefault((item) => item.Dynamic);
         internal async Task<PowerLineEndPointExecutionResult> OnRequestAsync(int index, string[] requestPath, PowerLineContext context)
         {
             if(index >= requestPath.Length)
@@ -90,6 +91,11 @@ namespace PowerLine
                 }
                 else
                 {
+                    PowerLineEndPoint dynamicChildEndPoint = this.GetDyanmicEndpoint();
+                    if(dynamicChildEndPoint != null)
+                    {
+                        return await dynamicChildEndPoint.OnRequestAsync(index + 1, requestPath, context);
+                    }
                     return new PowerLineEndPointExecutionResult(context, PowerLinExecutionResultType.EndPointNotFound, this);
                 }
             }

@@ -1,5 +1,9 @@
 ﻿using Microsoft.VisualBasic;
 using Newtonsoft.Json.Linq;
+using PowerLine.Upnp;
+using PowerLine.Upnp.UpnpControl;
+using PowerLine.Upnp.UpnpCustomPackets;
+using PowerLine.Upnp.UpnpStructures;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,6 +28,7 @@ namespace PowerLine
         private Task serverTask;
         private EventWaitHandle serverStopped;
 
+        private object endpointsLock;
         private Dictionary<string, PowerLineEndPoint> endPoints;
 
         private List<PowerLineWebsocketClient> websocketClients;
@@ -37,9 +42,19 @@ namespace PowerLine
         public event EventHandler<HttpListenerContext> OnHttpClient;
         public event EventHandler<Exception> OnError;
 
-      
-        public PowerLineServer(string bindDomain, bool allowEvents = false, IEnumerable<PowerLineEndPoint> endpoints = null)
+        private Upnp.UpnpEngine upnpEngine;
+        private PowerLineEndPoint upnpEndpoint;
+
+        public readonly IPAddress BindAddress;
+        public readonly int BindPort;
+
+        public PowerLineServer(IPAddress bindAddress, int bindPort, bool allowEvents = false, IEnumerable<PowerLineEndPoint> endpoints = null)
         {
+            this.BindAddress = bindAddress;
+            this.BindPort = bindPort;
+            this.endpointsLock = new object();
+            this.upnpEngine = new Upnp.UpnpEngine(this);
+            this.upnpEndpoint = Upnp.PowerLineUpnpHttpHandle.GetEndpoint(this.upnpEngine);
             this.websocketEventLock = new object();
             this.websocketEvents = new Dictionary<string, PowerLineEvent>();
             this.websocketClientLock = new object();
@@ -47,7 +62,7 @@ namespace PowerLine
             this.serverStopped = new EventWaitHandle(true, EventResetMode.ManualReset);
 
             this.mainListener = new HttpListener();
-            this.mainListener.Prefixes.Add(bindDomain);
+            this.mainListener.Prefixes.Add(this.BuildBindUrl());
 
             this.endPoints = (endpoints == null) ? new Dictionary<string, PowerLineEndPoint>() : new Dictionary<string, PowerLineEndPoint>(endpoints.Select((item) => new KeyValuePair<string, PowerLineEndPoint>(item.EndPointName, item)));
             if (allowEvents)
@@ -55,11 +70,33 @@ namespace PowerLine
                 this.AddEndpoint(PowerLineEventHandler.GetEndPoint(this));
             }
         }
-               
+
+
+        internal string BuildBindUrl() => (this.BindAddress == IPAddress.Any) ? BuildBindUrl("*", this.BindPort) : BuildBindUrl(this.BindAddress.ToString(), this.BindPort);
+        public static string BuildBindUrl(string address, int port) => $"http://{address}:{port}/";
         public PowerLineEndPoint AddEndpoint(PowerLineEndPoint endpoint)
         {
-            this.endPoints.Add(endpoint.EndPointName, endpoint);
-            return endpoint;
+            lock(this.endpointsLock)
+            {
+                if (this.endPoints.ContainsKey(endpoint.EndPointName))
+                {
+                    this.endPoints[endpoint.EndPointName] = endpoint;
+                }
+                else
+                {
+                    this.endPoints.Add(endpoint.EndPointName, endpoint);
+                }
+                return endpoint;
+            }
+            
+        }
+        public PowerLineEndPoint RemoveEndpoint(PowerLineEndPoint endpoint)
+        {
+            lock (this.endpointsLock)
+            {
+                this.endPoints.Remove(endpoint.EndPointName);
+                return endpoint;
+            }
         }
         public PowerLineEvent CreateEvent(string eventName )
         {
@@ -106,6 +143,38 @@ namespace PowerLine
             this.Stop();
         }
 
+        public void StartUpnp()
+        {
+            this.AddEndpoint(this.upnpEndpoint);
+            this.upnpEngine.Start();
+
+
+
+            UpnpRootDevice device = new UpnpRootDevice(
+                Guid.NewGuid(),
+                "LampForMenahem",
+                new UpnpNtDeviceType("Eva3Light", "1"),
+                new UpnpManufacturer("fotonica"), 
+                new UpnpModel("Eva3"));
+
+            device.PresentationURL = "http://192.168.0.250";
+
+            this.upnpEngine.AddDevice(device);
+            Console.WriteLine($"Running for: {device.Id.ToString()}");
+        }
+        public void StopUpnp()
+        {
+            this.upnpEngine.Stop();
+            this.RemoveEndpoint(this.upnpEndpoint);
+        }
+
+        public PowerLineWebsocketClient[] GetAllClients()
+        {
+            lock(this.websocketClientLock)
+            {
+                return this.websocketClients.ToArray();
+            }
+        }
         private async Task<PowerLineEndPointExecutionResult> GetHandleResultAsync(HttpListenerContext context)
         {
             string[] UrlPath = context.Request.Url.AbsolutePath.Split('/');
@@ -114,16 +183,33 @@ namespace PowerLine
         }
         private PowerLineEndPoint GetDynamicEndpoint(Uri url)
         {
-            foreach(KeyValuePair<string, PowerLineEndPoint> endpoint in this.endPoints)
+            lock (this.endpointsLock)
             {
-                if (endpoint.Value.Dynamic && endpoint.Value.VerifyDynamicEndpoint(url)) return endpoint.Value;
+                foreach (KeyValuePair<string, PowerLineEndPoint> endpoint in this.endPoints)
+                {
+                    if (endpoint.Value.Dynamic && endpoint.Value.VerifyDynamicEndpoint(url)) return endpoint.Value;
+                }
+                return null;
             }
-            return null;
+        }
+        private bool GetEndPoint(string name, out PowerLineEndPoint endpoint)
+        {
+            lock (this.endpointsLock)
+            {
+                if (this.endPoints.TryGetValue(name, out endpoint))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
         }
         private async Task<PowerLineEndPointExecutionResult> GetHandleResultAsync(PowerLineContext context)
         {
             context.ResponseHeader["Server"] = "PowerLine powered by ";
-            if (this.endPoints.TryGetValue(context.Path[1], out PowerLineEndPoint endpoint))
+            if (this.GetEndPoint(context.Path[1], out PowerLineEndPoint endpoint))
             {
                 return await endpoint.OnRequestAsync(2, context.Path, context);
             }
